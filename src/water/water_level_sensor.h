@@ -19,18 +19,29 @@ class WaterLevelSensor
 	pinMode(highPin, INPUT);
   }
   
-  WaterLevel getWaterLevel() {
-  int lowSensor = digitalRead(lowPin);
-  int highSensor = digitalRead(highPin);
-  if(lowSensor==1 && highSensor==1) {
-    return WATER_LEVEL_HIGH;
-  } else if (lowSensor==0 && highSensor==1) {
-    return WATER_LEVEL_ERROR;
-  } else if (lowSensor==1 && highSensor==0){
-     return WATER_LEVEL_ENOUGH;
-  } else {
-     return WATER_LEVEL_LOW;
-  }
+  WaterLevel getWaterLevel()
+  {
+    int lowSensor = digitalRead(lowPin);
+    int highSensor = digitalRead(highPin);
+    if (lowSensor == 1 && highSensor == 1)
+    {
+      return WATER_LEVEL_HIGH;
+    }
+
+    else if (lowSensor == 0 && highSensor == 1)
+    {
+      return WATER_LEVEL_ERROR;
+    }
+
+    else if (lowSensor == 1 && highSensor == 0)
+    {
+      return WATER_LEVEL_ENOUGH;
+    }
+    
+    else
+    {
+      return WATER_LEVEL_LOW;
+    }
   }
 
   String printWaterLevel(WaterLevel waterLevel)
@@ -45,7 +56,7 @@ class WaterLevelSensor
     case WATER_LEVEL_ENOUGH:
       return "Good";
     default:
-      " ERR";
+      return  " ERR";
     }
   }
 };

@@ -14,8 +14,8 @@
 #include <math.h>
 
 // Define pins for sensors
-#define WATER_LEVEL_HIGH_PIN 12
-#define WATER_LEVEL_LOW_PIN 13
+#define WATER_LEVEL_HIGH_PIN 13
+#define WATER_LEVEL_LOW_PIN 12
 #define NUTRIENT_RELAY_PIN 8 
 #define SOLENOID_RELAY_PIN 7 
 
@@ -49,7 +49,7 @@ float goalEC = 2;
 bool isOpen = false;
 bool isError = false;
 unsigned int waterCnt;
-const int MAX_WATER_LOOPS = 10;
+const int MAX_WATER_LOOPS = 10; 
 
 
 void setRequestHandlerFromWifi(String payload)
@@ -57,16 +57,23 @@ void setRequestHandlerFromWifi(String payload)
   while (Serial.available() > 0)
   {
     String temp = Serial.readStringUntil('\n');
-
     if (temp == "setec")
-    {
+    { 
+      lcd.clear();
+      lcd.print("Sending EC");
       String ec = Serial.readStringUntil('\n');
       goalEC = ec.toFloat();
+      break;
+
     }
 
-    if (temp == "currernt")
-    {
-      Serial.print(payload + '\n');
+    if (temp == "current")
+    { 
+      lcd.clear();
+      lcd.print("Sending Current");
+      Serial.print(payload);
+      break;
+
     }
   }
 }
@@ -166,13 +173,16 @@ void setup() {
   eCSensor.begin();
   
   // Check Control Sensor
-  nutrient.open();
-  delay(50);
-  nutrient.close();
 
   solenoidValve.open();
-  delay(50);
-  solenoidValve.open();
+  delay(500);
+  solenoidValve.close();
+
+  nutrient.open();
+  delay(500);
+  nutrient.close();
+
+ 
   
   //initialize water count
   lcd.init();
@@ -188,48 +198,50 @@ void loop() {
   /*
   //   This step aim for measuring circumstance 
   */
-
-  float currentTemp  =round(tempHumditySensor.getTemperature()*100)/100;
-  float currentRelativeHumidity  =round(tempHumditySensor.getRelativeHumidity()*100)/100;
-  float currentLux =round(lightMeter.readLightLevel()*100)/100;
-  float currentPPM =round(co2Sensor.getPPM()*100)/100;
+  float currentTemp  =roundf(tempHumditySensor.getTemperature()*1000)/ float (1000);
+  float currentRelativeHumidity  =roundf(tempHumditySensor.getRelativeHumidity()*1000)/ float (1000);
+  float currentLux =roundf(lightMeter.readLightLevel()*1000)/ float (1000);
+  float currentPPM =roundf(co2Sensor.getPPM()*1000)/ float (1000);
 
   /*
   //   This step aim for measuring water circumstance 
   */
  
-  float currentWaterTemp =round(waterTemperatureSensor.getWaterTemperature()*100)/100;
-  float currentPHAvg =round(pHsensor.getPHAvg()*100)/100;
+  float currentWaterTemp =roundf(waterTemperatureSensor.getWaterTemperature()*1000)/ float (1000);
+  float currentPHAvg =roundf(pHsensor.getPHAvg()*1000)/ float (1000);
   WaterLevel currentWaterLevel =waterLevelSensor.getWaterLevel();
-  float currentEC =round(eCSensor.getEC()*100)/100;
+  float currentEC = roundf(eCSensor.getEC()*1000)/ float(1000);
+
 
   // Integated current value 
-  String payload = String(currentTemp) + ',' + String(currentRelativeHumidity)+ ',' + String(currentLux)+ ',' + String(currentPPM) + ',' + String(WaterLevel(currentWaterLevel))+ ',' + String(currentWaterTemp) + ',' + String(currentPHAvg) + ',' + String(currentEC) ;
-  
+  String payload = String(currentTemp) + ',' + String(currentRelativeHumidity)+ ',' + String(currentLux)+ ',' + String(currentPPM) + ',' + String(WaterLevel(currentWaterLevel))+ ',' + String(currentWaterTemp) + ',' + String(currentPHAvg) + ',' + String(currentEC) + ',' ;
+  // Serial.println(payload);
   /*
   //   LCD Print current value
   */
 
+  lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Temperature: " + String(currentTemp) + 'C');
+  lcd.print("Temperature:  " + String(currentTemp) + 'C');
   lcd.setCursor(0,1);
-  lcd.print("Humidity:    " + String(currentRelativeHumidity) + '%');
+  lcd.print("Humidity:     " + String(currentRelativeHumidity) + '%');
   lcd.setCursor(0,2);
-  lcd.print("Lux:         "+ String(currentLux));
+  lcd.print("Lux:           "+ String(currentLux));
   lcd.setCursor(0,3);
-  lcd.print("CO2PPM:     "+ String(currentPPM));
+  lcd.print("CO2PPM:       "+ String(currentPPM));
 
   connectToUnoWifiWithDelay(2000, payload);
   
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("WaterTemp:   " + String(currentWaterTemp) + 'C');
+  lcd.print("WaterTemp:    " + String(currentWaterTemp) + 'C');
   lcd.setCursor(0,1);
-  lcd.print("WaterLevel:    "+ String(waterLevelSensor.printWaterLevel(currentWaterLevel)));
+  if(isError) lcd.print("**** Push Reset ****");
+  else lcd.print("WaterLevel:     "+ String(waterLevelSensor.printWaterLevel(currentWaterLevel)));
   lcd.setCursor(0,2);
-  lcd.print("PH:            " + String(currentPHAvg));
+  lcd.print("PH:             " + String(currentPHAvg));
   lcd.setCursor(0,3);
-  lcd.print("EC:            "+ String(currentEC));
+  lcd.print("EC:"+ String(currentEC) + "  GoalEC:" + String(goalEC));
   
   connectToUnoWifiWithDelay(2000, payload);
 
