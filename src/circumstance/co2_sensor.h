@@ -16,16 +16,18 @@ class Co2Sensor
     serial.begin(9600);
   }
 
-  
-  float getPPM() {
-   serial.listen();
-  MHZ19_RESULT response = ppmSensor.retrieveData();
-  if (response == MHZ19_RESULT_OK)
+  float getPPM()
   {
-    return ppmSensor.getCO2();
-  } else
-  {
-    return -1;
+    serial.listen();
+    MHZ19_RESULT response = ppmSensor.retrieveData();
+    if (response == MHZ19_RESULT_OK)
+    {
+      return ppmSensor.getCO2();
+    }
+    else
+    {
+      return -1;
+    }
   }
-  }
+
 };

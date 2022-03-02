@@ -13,27 +13,27 @@ class TempHumditySensor;
 
 class TempHumditySensor
 {
-	Adafruit_HTU21DF htu =  Adafruit_HTU21DF();
+  Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
-  public:
-  
-  void checkSensor(){
+public:
+  void checkSensor()
+  {
     htu.begin();
-    if (!htu.begin()) {
-    Serial.println("HTU not connected!");
-  } else {
-    Serial.println("HTU sensor On!");
-  }
-  }
-
-
-  float getTemperature() {
-  float temp = htu.readTemperature();
-  return temp;
+    if (!htu.begin())
+    {
+      Serial.println("HTU not connected!");
+    }
   }
 
-  float getRelativeHumidity() {
-  float rel_hum = htu.readHumidity();
-  return rel_hum;
+  float getTemperature()
+  {
+    float temp = htu.readTemperature();
+    return temp;
+  }
+
+  float getRelativeHumidity()
+  {
+    float rel_hum = htu.readHumidity();
+    return rel_hum;
   }
 };

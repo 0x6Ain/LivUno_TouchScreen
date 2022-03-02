@@ -1,5 +1,7 @@
 #include <Arduino.h>
+#include <Wire.h>
 enum WaterLevel { WATER_LEVEL_LOW, WATER_LEVEL_ENOUGH, WATER_LEVEL_HIGH, WATER_LEVEL_ERROR };
+
 class WaterLevelSensor;
 
 class WaterLevelSensor
@@ -15,14 +17,24 @@ class WaterLevelSensor
   WaterLevelSensor(uint8_t lowInput,uint8_t highInput) {
 	lowPin = lowInput;
   highPin = highInput;
-	pinMode(lowPin, INPUT);
-	pinMode(highPin, INPUT);
+	pinMode(lowPin, INPUT_PULLUP);
+	pinMode(highPin, INPUT_PULLUP);
   }
+
   
   WaterLevel getWaterLevel()
-  {
-    int lowSensor = digitalRead(lowPin);
-    int highSensor = digitalRead(highPin);
+  { 
+    int lowSensor = -1;
+    int highSensor = -1;
+    digitalWrite(lowPin, HIGH);
+    digitalWrite(highPin, HIGH);
+    lowSensor = digitalRead(lowPin);
+    highSensor = digitalRead(highPin);
+
+    if(lowSensor < 0 || highSensor < 0){
+      return WATER_LEVEL_ERROR;
+    }
+    
     if (lowSensor == 1 && highSensor == 1)
     {
       return WATER_LEVEL_HIGH;
