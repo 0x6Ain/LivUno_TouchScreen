@@ -67,7 +67,7 @@ public:
     }
     sensorstring = ""; // clear the string
     sensor_string_complete = false;
-    // ecValue = ecValue / 1000;
+    ecValue = ecValue / 1000;
     return ecValue;
   }
 

@@ -16,7 +16,7 @@ class Co2Sensor
     serial.begin(9600);
   }
 
-  float getPPM()
+  int getPPM()
   {
     serial.listen();
     MHZ19_RESULT response = ppmSensor.retrieveData();
