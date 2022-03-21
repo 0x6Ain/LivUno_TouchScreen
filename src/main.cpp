@@ -44,11 +44,6 @@ bool isLEDTurnOn = false;
 bool isPumpTurnOn = false;
 bool isAirconTurnOn = false;
 
-
-float getRandomFloatFromRange(int min,int max){
-  return random(min*10, max*10)/10;
-}
-
 int graphArray[120];
 float currentTemp = -1;
 float currentRelativeHumidity = -1;
@@ -65,9 +60,10 @@ String payload = String(currentTemp) + "," + String(currentRelativeHumidity) + "
 int savedDataQuantity = 0;
 size_t i;
 // This aim for count
-float goalEC = 2.3;
-int goalTemp = 22;
-int goalPumpTime = 45; // Pump Time Set as 45 Minute;
+float goalEC = 2.00;
+int goalTemp = 24;
+int goalPumpTime = 15; // Pump Time Set as 45 Minute;
+int goalPumpDownTime = 15;
 int turnOnHour = 9;
 int turnOnMin = 00;
 int turnOffHour = 3;
@@ -76,6 +72,9 @@ char *_id;
 AlarmID_t ledTurnOnAlarmID;
 AlarmID_t ledTurnOffAlarmID;
 AlarmID_t pumpControlAlarmID;
+AlarmID_t pumpOffControlAlarmID;
+AlarmID_t ecControlAlarmID;
+
 AlarmID_t stackValuesAlarmID;
 // AlarmID_t pumpControlAlarmID;
 
@@ -108,8 +107,7 @@ void airconOff();
 void pumpOpen();
 void pumpClose();
 void pumpControl();
-void commuicateGraphArray();
-void SetNextionPage();
+void airconControl();
 
 
 void setup() {
@@ -152,23 +150,19 @@ void setup() {
   setTime(mytime.Hour, mytime.Minute, mytime.Second, mytime.Day, mytime.Month, mytime.Year);
   setUpTimer();
   takeCurrentValue();
-  SetNextionPage();
-  /* Set up Timer(Unchanging Contorl Function) */
-  Alarm.timerRepeat(0,15,0, pumpControl);
-  // Alarm.timerRepeat(3, takeCurrentValue);
+
+  Alarm.timerRepeat(0,30, 0,controlEc);
+  Alarm.timerRepeat(0,5, 0,airconControl);
+
   Serial.println("Set done");
 }
 
 void loop() {
   Alarm.delay(0); // Timer Start 
-  connectToUnoWifiWithDelay(10000);
-  takeCurrentValue();
-  if (pumpControlCount == 4 && isControlWater) {
-    // connectToUnoWifiWithDelay( 5 * 60 * 1000, payload);
-    controlEc();
-    isControlWater = false;
-    pumpControlCount = 0;
+  while(Serial.available() <= 0 || nextion.available() <= 0 ){
+    takeCurrentValue();
   }
+  connectToUnoWifiWithDelay(500);
 }
 
 
@@ -197,7 +191,6 @@ void setRequestHandlerFromWifi()
       takeCurrentValue();
       Serial.println(payload);
       break;
-
     }
 
     if (temp.indexOf("controlEC") != -1)
@@ -287,7 +280,7 @@ void controlEc()
     if (difference > 1.6)
     {
       nutrientOpen();
-      connectToUnoWifiWithDelay(10000);
+      connectToUnoWifiWithDelay(7000);
       nutrientClose();
     }
     else if (difference > 1.0)
@@ -304,64 +297,27 @@ void controlEc()
     }
   }
   
-  //EC HIGH
-  // else if (currentEC > goalEC && waterLevelSensor.getWaterLevel() < WATER_LEVEL_HIGH)
-  // {
-  //   difference = currentEC - goalEC;
-  //   if (difference > 1.0)
-  //   {
-  //     airconOn();
-  //     connectToUnoWifiWithDelay(10000);
-  //     airconOff();
-  //   }
-  //   else
-  //   {
-  //     airconOn();
-  //     connectToUnoWifiWithDelay(3000);
-  //     airconOff();
-  //   }
-  // }
-  
+
 }
 
 
-void controlWater()
-{
-  // Serial.println("control Water!");
-  // WaterLevel current = waterLevelSensor.getWaterLevel();
-  // if (current == WATER_LEVEL_LOW && !isOpen)
-  // {
-  //   airconOn();
-  //   isOpen = true;
-  // }
-  // else if (current > WATER_LEVEL_LOW && isOpen)
-  // {
-  //   airconOff();
-  //   isOpen = false;
-  // }
-  // else
-  // {
-  //   airconOff();
-  //   isOpen = false;
-  // }
-}
 
 void takeCurrentValue()
 { 
   // Serial.println("Take Current Value");
   
   //TODO: remove placeholder
-  // currentTemp  =tempHumditySensor.getTemperature();
-  currentTemp  = getRandomFloatFromRange(200,210)/10;
+  currentTemp  =tempHumditySensor.getTemperature(); 
+  // currentTemp  = getRandomFloatFromRange(200,210)/10;
   // Serial.println(currentTemp);
-  // currentRelativeHumidity = tempHumditySensor.getRelativeHumidity();
-  currentRelativeHumidity  = getRandomFloatFromRange(380,390)/10;
+  currentRelativeHumidity = tempHumditySensor.getRelativeHumidity();
+  // currentRelativeHumidity  = getRandomFloatFromRange(380,390)/10;
   // Serial.println(currentRelativeHumidity);
-  // currentLux = lightMeter.readLightLevel();
-  currentLux = isLEDTurnOn ? getRandomFloatFromRange(950,1003)*10 :getRandomFloatFromRange(3231,3235) ;
+  currentLux = lightMeter.readLightLevel() + 300; // Cause acrylic shield
+  // currentLux = isLEDTurnOn ? getRandomFloatFromRange(950,1003)*10 :getRandomFloatFromRange(3231,3235) ;
   // Serial.println(currentLux);
-  // currentPPM = co2Sensor.getPPM();
-  currentPPM = getRandomFloatFromRange(420,430);
+  currentPPM = co2Sensor.getPPM();
+  // currentPPM = getRandomFloatFromRange(420,430);
   // Serial.println(currentPPM); 
   currentWaterTemp =waterTemperatureSensor.getWaterTemperature();
   // Serial.println(currentWaterTemp);
@@ -381,17 +337,21 @@ void takeCurrentValue()
   myNextion.setComponentText("page0.t4", String(currentWaterTemp));
   myNextion.setComponentText("page0.t5", String(currentEC));
   myNextion.setComponentText("page0.t6", String(currentPHAvg));
+  myNextion.setComponentText("page.t7",String(currentWaterLevel));
+  myNextion.setComponentValue("page_setting.x0",goalTemp*10);
+  myNextion.setComponentValue("page_setting.x1",goalEC*100);
+
   if(isLEDTurnOn){
-    myNextion.sendCommand("page_setting.p0=11");
-  } else myNextion.sendCommand("page_setting.p0=12");
+    myNextion.sendCommand("page_setting.p0=12");
+  } else myNextion.sendCommand("page_setting.p0=11");
 
   if(isPumpTurnOn){
-    myNextion.sendCommand("page_setting.p1=11");
-  } else myNextion.sendCommand("page_setting.p1=12");
+    myNextion.sendCommand("page_setting.p1=12");
+  } else myNextion.sendCommand("page_setting.p1=11");
 
   if(isAirconTurnOn){
-    myNextion.sendCommand("page_setting.p2=11");
-  } else myNextion.sendCommand("page_setting.p2=12");
+    myNextion.sendCommand("page_setting.p2=12");
+  } else myNextion.sendCommand("page_setting.p2=11");
   // myNextion.setComponentText("page0.t5", String(currentWaterLevel));
 }
 
@@ -402,19 +362,6 @@ void touchScreenHandler()
     Serial.println(nexMessage);
   }
 
-  // if (nexMessage.startsWith("current"))
-  // {
-  //   delayMicroseconds(10);
-  //   myNextion.setComponentText("t0", String(currentTemp));
-  //   myNextion.setComponentText("t1", String(currentRelativeHumidity));
-  //   myNextion.setComponentText("t2", String(currentLux));
-  //   myNextion.setComponentText("t3", String(currentPPM));
-  //   myNextion.setComponentText("t4", String(currentWaterTemp));
-  //   myNextion.setComponentText("t5", String(currentEC));
-  //   myNextion.setComponentText("t6", String(currentPHAvg));
-    
-  //   myNextion.setComponentText("t5", String(currentWaterLevel));
-  // }
 
   if (nexMessage.indexOf("turnOnLED") != -1)            turnOnLED();
   if (nexMessage.indexOf("turnOffLED") != -1)           turnOffLED();
@@ -425,15 +372,15 @@ void touchScreenHandler()
 
   
 
-  if (nexMessage.startsWith("nexPumpSet"))
+  if (nexMessage.startsWith("PumpOnTime"))
   {
     char nexChar[strlen(nexMessage.c_str())];
     strcpy(nexChar, nexMessage.c_str());
     char *ptr = strtok(nexChar, "=");
     ptr = strtok(NULL, "=");
     goalPumpTime = atof(ptr);
-    // Serial.println(goalPumpTime);
-    // Serial.println("goalPumpTime set done");
+    ptr = strtok(NULL, "=");
+    goalPumpDownTime = atof(ptr);
     isControlValueChanged = true;
   }
 
@@ -444,7 +391,6 @@ void touchScreenHandler()
     char *ptr = strtok(nexChar, "=");
     ptr = strtok(NULL, "=");
     goalTemp = atof(ptr);
-    isControlValueChanged = true;
     // Serial.println(goalTemp);
     // Serial.println("goalTempTime set done");
   }
@@ -464,63 +410,17 @@ void touchScreenHandler()
     turnOnMin = atof(ptr);
     setUpTimer();
   }
+  if(nexMessage.startsWith("goalTemp"))
+  {
+    char nexChar[strlen(nexMessage.c_str())];
+    strcpy(nexChar, nexMessage.c_str());
+    char *ptr = strtok(nexChar, "=");
+    ptr = strtok(NULL, "=");
+    goalTemp = atof(ptr);
+    ptr = strtok(NULL, "=");
+    goalEC = atof(ptr);
 
-  // if (nexMessage.indexOf("nexTemp") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //   Serial.println("nexTemp");
-  //   commuicateGraphArray();
-    
-  // }
-
-  // if (nexMessage.indexOf("nexHumid") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //   Serial.println("nexHumid");
-  //   commuicateGraphArray();
-    
-  // }
-
-  // if (nexMessage.indexOf("nexLux") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //   Serial.println("nexLux");
-  //   commuicateGraphArray();
-    
-  // }
-
-  // if (nexMessage.indexOf("nexPPM") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //   Serial.println("nexPPM");
-  //   commuicateGraphArray();
-    
-  // }
-
-  // if (nexMessage.indexOf("nexWT") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //   Serial.println("nexWT");
-  //   commuicateGraphArray();
-    
-  // }
-
-  // if (nexMessage.indexOf("nexEC") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //    Serial.println("nexEC");
-  //   commuicateGraphArray();
-    
-  // }
-
-  //  if (nexMessage.indexOf("nexPH") != -1)
-  // {
-  //   delayMicroseconds(10);
-  //   Serial.println("nexPH");
-  //   commuicateGraphArray();
-    
-  // }
-
+  }
   
 }
 
@@ -574,6 +474,7 @@ void setUpTimer()
   Alarm.free(ledTurnOnAlarmID);
   Alarm.free(ledTurnOffAlarmID);
   Alarm.free(pumpControlAlarmID);
+  Alarm.free(pumpOffControlAlarmID);
   Serial.print("turn Off Time is ");
   Serial.println(turnOffHour + String(":") + turnOffMin);
   Serial.print("turn On Time is ");
@@ -584,19 +485,10 @@ void setUpTimer()
   myNextion.setComponentValue("page_setting.n3", turnOnMin);
   myNextion.setComponentValue("page_setting.n4", turnOffHour);
   myNextion.setComponentValue("page_setting.n5", turnOffMin);
-  pumpControlAlarmID = Alarm.timerRepeat(0, goalPumpTime, 0, pumpControl); // Timer for every 45 minutes
+  pumpOffControlAlarmID = Alarm.timerRepeat(0, goalPumpTime,0, pumpClose);
+  pumpControlAlarmID = Alarm.timerRepeat(0, goalPumpTime + goalPumpDownTime, 0, pumpOpen); 
 }
 
-void SetNextionPage() 
-{
-  // Serial.println("Setting Start to TS");
-  // myNextion.setComponentValue("page2.h0",turnOnHour*60 + turnOnMin);
-  // myNextion.setComponentValue("page2.h1",turnOffHour*60 + turnOffMin);
-  // myNextion.setComponentValue("page_setting.h1",goalPumpTime);
-  // myNextion.setComponentValue("page_setting.h0",goalTemp);
-  // myNextion.setComponentText("page_setting.t3",String(goalEC));
-  
-}
 
 void pumpControl()
 {
@@ -607,32 +499,12 @@ void pumpControl()
   } else pumpOpen();
 }
 
-void commuicateGraphArray()
+void airconControl()
 {
-  while (Serial.available() > 0)
+  if (currentTemp > goalTemp && !isAirconTurnOn)
   {
-    String temp = Serial.readStringUntil('\n');
-    Serial.println(temp);
-    i = 0;
-    if (temp.indexOf("graph") != -1)
-    {
-      char nexChar[strlen(nexMessage.c_str())];
-      strcpy(nexChar, nexMessage.c_str());
-      char *ptr = strtok(nexChar, "=,");
-      while (ptr == NULL)
-      {
-        ptr = strtok(NULL, ",");
-        graphArray[i] = atoi(ptr);
-        i++;
-      }
-      break;
-    }
+    airconOn();
   }
-  while (graphArray[i] == 0)
-  {
-    String compValue = "add 1,0," + String(graphArray[i]);
-    myNextion.sendCommand(compValue.c_str());
-    myNextion.sendCommand(compValue.c_str());
-    myNextion.sendCommand(compValue.c_str());
-  }
+  else
+    airconOff();
 }
