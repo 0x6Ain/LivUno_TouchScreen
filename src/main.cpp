@@ -12,7 +12,7 @@
 #include <EEPROM.h>
 #include <Nextion.h>
 #include <TimeAlarms.h>
-
+// 2022-03-21
 // Define pins for sensors
 #define WATER_LEVEL_HIGH_PIN 13
 #define WATER_LEVEL_LOW_PIN 12
@@ -44,7 +44,6 @@ bool isLEDTurnOn = false;
 bool isPumpTurnOn = false;
 bool isAirconTurnOn = false;
 
-int graphArray[120];
 float currentTemp = -1;
 float currentRelativeHumidity = -1;
 float currentLux = -1;
@@ -56,14 +55,12 @@ float currentEC = -1;
 
 String payload = String(currentTemp) + "," + String(currentRelativeHumidity) + "," + String(currentLux) + "," + String(currentPPM) + "," + String(currentWaterTemp) + "," + String(currentWaterLevel) + "," + String(currentPHAvg) + "," + String(currentEC) + ",";
 
-// 20 min set for calling function 
-int savedDataQuantity = 0;
 size_t i;
 // This aim for count
 float goalEC = 2.00;
-int goalTemp = 24;
-int goalPumpTime = 15; // Pump Time Set as 45 Minute;
-int goalPumpDownTime = 15;
+int goalTemp = 24;         // Goal Temperature 24'C
+int goalPumpTime = 15;     // Pump   Up Time Set to 15 Minutes
+int goalPumpDownTime = 15; // Pump Down Time Set to 15 Minutes
 int turnOnHour = 9;
 int turnOnMin = 00;
 int turnOffHour = 3;
@@ -158,11 +155,11 @@ void setup() {
 }
 
 void loop() {
-  Alarm.delay(0); // Timer Start 
-  while(Serial.available() <= 0 || nextion.available() <= 0 ){
-    takeCurrentValue();
-  }
-  connectToUnoWifiWithDelay(500);
+  Alarm.delay(0); // Timer Start
+  currentTemp = tempHumditySensor.getTemperature();
+  takeCurrentValue();
+
+  connectToUnoWifiWithDelay(10000);
 }
 
 
@@ -307,37 +304,61 @@ void takeCurrentValue()
   // Serial.println("Take Current Value");
   
   //TODO: remove placeholder
-  currentTemp  =tempHumditySensor.getTemperature(); 
-  // currentTemp  = getRandomFloatFromRange(200,210)/10;
+  // currentTemp  =tempHumditySensor.getTemperature(); 
+  // // currentTemp  = getRandomFloatFromRange(200,210)/10;
   // Serial.println(currentTemp);
-  currentRelativeHumidity = tempHumditySensor.getRelativeHumidity();
-  // currentRelativeHumidity  = getRandomFloatFromRange(380,390)/10;
+  // currentRelativeHumidity = tempHumditySensor.getRelativeHumidity();
+  // // currentRelativeHumidity  = getRandomFloatFromRange(380,390)/10;
   // Serial.println(currentRelativeHumidity);
-  currentLux = lightMeter.readLightLevel() + 300; // Cause acrylic shield
-  // currentLux = isLEDTurnOn ? getRandomFloatFromRange(950,1003)*10 :getRandomFloatFromRange(3231,3235) ;
+  // currentLux = lightMeter.readLightLevel() + 300; // Cause acrylic shield
+  // // currentLux = isLEDTurnOn ? getRandomFloatFromRange(950,1003)*10 :getRandomFloatFromRange(3231,3235) ;
   // Serial.println(currentLux);
-  currentPPM = co2Sensor.getPPM();
-  // currentPPM = getRandomFloatFromRange(420,430);
+  // currentPPM = co2Sensor.getPPM();
+  // // currentPPM = getRandomFloatFromRange(420,430);
   // Serial.println(currentPPM); 
+  // currentWaterTemp =waterTemperatureSensor.getWaterTemperature();
+  // // Serial.println(currentWaterTemp);
+  // currentWaterLevel = waterLevelSensor.getWaterLevel();
+  // // Serial.println(currentWaterLevel);
+  // currentEC = eCSensor.getEC();
+  // // Serial.println(currentEC);
+  // currentPHAvg =pHSensor.singleReading().getpH();
+  // // Serial.println(currentPHAvg);
+
+  currentTemp = tempHumditySensor.getTemperature();
+  myNextion.setComponentText("page0.t0", String(currentTemp));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
+
+  currentRelativeHumidity = tempHumditySensor.getRelativeHumidity();
+  myNextion.setComponentText("page0.t1", String(currentRelativeHumidity));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
+
+  currentLux = lightMeter.readLightLevel() + 300;
+  myNextion.setComponentText("page0.t2", String(currentLux));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000); // Cause acrylic shield
+  
+  currentPPM = co2Sensor.getPPM();
+  myNextion.setComponentText("page0.t3", String(currentPPM));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
+  
   currentWaterTemp =waterTemperatureSensor.getWaterTemperature();
-  // Serial.println(currentWaterTemp);
+  myNextion.setComponentText("page0.t4", String(currentWaterTemp));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
+  
   currentWaterLevel = waterLevelSensor.getWaterLevel();
-  // Serial.println(currentWaterLevel);
+  myNextion.setComponentText("page.t7",String(currentWaterLevel));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
+ 
   currentEC = eCSensor.getEC();
-  // Serial.println(currentEC);
+  myNextion.setComponentText("page0.t5", String(currentEC));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
+ 
   currentPHAvg =pHSensor.singleReading().getpH();
-  // Serial.println(currentPHAvg);
+  myNextion.setComponentText("page0.t6", String(currentPHAvg));
+  if(Serial.available() > 0 || nextion.available() > 0) connectToUnoWifiWithDelay(5000);
 
   payload = String(currentTemp) + "," + String(currentRelativeHumidity) + "," + String(currentLux) + "," + String(currentPPM) + "," + String(currentWaterTemp) + "," + String(currentWaterLevel) + "," + String(currentPHAvg) + "," + String(currentEC) + ",";
   // Serial.println(payload);
-  myNextion.setComponentText("page0.t0", String(currentTemp));
-  myNextion.setComponentText("page0.t1", String(currentRelativeHumidity));
-  myNextion.setComponentText("page0.t2", String(currentLux));
-  myNextion.setComponentText("page0.t3", String(currentPPM));
-  myNextion.setComponentText("page0.t4", String(currentWaterTemp));
-  myNextion.setComponentText("page0.t5", String(currentEC));
-  myNextion.setComponentText("page0.t6", String(currentPHAvg));
-  myNextion.setComponentText("page.t7",String(currentWaterLevel));
   myNextion.setComponentValue("page_setting.x0",goalTemp*10);
   myNextion.setComponentValue("page_setting.x1",goalEC*100);
 
@@ -485,18 +506,17 @@ void setUpTimer()
   myNextion.setComponentValue("page_setting.n3", turnOnMin);
   myNextion.setComponentValue("page_setting.n4", turnOffHour);
   myNextion.setComponentValue("page_setting.n5", turnOffMin);
-  pumpOffControlAlarmID = Alarm.timerRepeat(0, goalPumpTime,0, pumpClose);
-  pumpControlAlarmID = Alarm.timerRepeat(0, goalPumpTime + goalPumpDownTime, 0, pumpOpen); 
+  pumpControlAlarmID = Alarm.timerRepeat(0, goalPumpTime + goalPumpDownTime, 0, pumpControl); 
 }
 
 
 void pumpControl()
-{
-  pumpControlCount++;
-  if(pumpControlCount == 4){
-    pumpClose();
-    isControlWater = true;
-  } else pumpOpen();
+{ 
+  if(!isPumpTurnOn) {
+    pumpOpen(); 
+  } else pumpClose();
+
+  Alarm.alarmOnce(goalPumpTime * 60 * 1000, pumpClose);
 }
 
 void airconControl()
